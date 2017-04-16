@@ -45,7 +45,8 @@ class ArchiveSpider(scrapy.Spider):
                                '/h1/text()')[1].extract()
         return title
 
-    def _parse_release_date(self, response):
+    @staticmethod
+    def _parse_release_date(response):
         release_date = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
                                                '//div[contains(@class, "thats-left")]'
                                                '//div[@class="key-val-big"]'
@@ -55,7 +56,8 @@ class ArchiveSpider(scrapy.Spider):
 
         return release_date
 
-    def _parse_more_link(self, response):
+    @staticmethod
+    def _parse_more_link(response):
         more_link = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
                                             '//div[contains(@class, "thats-left")]'
                                             '//div[@class="key-val-big"]'
