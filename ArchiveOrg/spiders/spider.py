@@ -62,6 +62,10 @@ class ArchiveSpider(scrapy.Spider):
         performer = self._parse_performer(response)
         item['performer'] = performer
 
+        # Parse catalog number
+        catalog_num = self._parse_catalog_num(response)
+        item['catalog_num'] = catalog_num
+
         # Pare more information link
         more_link = self._parse_more_link(response)
         item['more_link'] = more_link
@@ -93,6 +97,14 @@ class ArchiveSpider(scrapy.Spider):
                                             '/p/text()').extract())
 
         return performer
+
+    @staticmethod
+    def _parse_catalog_num(response):
+        catalog_num = response.xpath('//div[contains(@class, "relative-row")]'
+                                     '//div[contains(@class, "thats-left")]'
+                                     '//div[@id="descript"]'
+                                     '/p[5]/text()')[1].extract()
+        return catalog_num
 
     @staticmethod
     def _parse_more_link(response):
