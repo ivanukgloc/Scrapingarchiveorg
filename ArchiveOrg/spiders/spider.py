@@ -19,6 +19,7 @@ class ArchiveSpider(scrapy.Spider):
 
     def parse_pages(self, response):
         page_links = []
+
         total_count = response.xpath('//div[@class="columns-facets"]'
                                      '/h3/text()').extract()
         total_count = self._clean_text(total_count[0])
@@ -35,6 +36,7 @@ class ArchiveSpider(scrapy.Spider):
     def parse_links(self, response):
         href_links = response.xpath('//div[contains(@class, "item-ttl")]'
                                     '/a/@href').extract()
+
         for href in href_links:
             link = 'https://archive.org%s' % href
             yield scrapy.Request(url=link, callback=self.parse_product, dont_filter=True)
@@ -56,21 +58,17 @@ class ArchiveSpider(scrapy.Spider):
 
         yield item
 
-    @staticmethod
-    def _parse_title(response):
+    def _parse_title(self, response):
         title = response.xpath('//div[contains(@class, "relative-row")]'
                                '//div[contains(@class, "thats-left")]'
                                '/h1/text()')[1].extract()
+        title = self._clean_text(title)
         return title
 
     @staticmethod
     def _parse_release_date(response):
-        release_date = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
-                                               '//div[contains(@class, "thats-left")]'
-                                               '//div[@class="key-val-big"]'
-                                               '/a/text()').extract())
-        if release_date == "78rpm":
-            release_date = "None"
+        release_date = is_empty(response.xpath('//div[contains(@class, "pubdate")]'
+                                               '/nobr[@class="hidden-xs"]/text()').extract())
 
         return release_date
 
