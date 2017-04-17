@@ -36,15 +36,19 @@ class ArchiveSpider(scrapy.Spider):
             yield scrapy.Request(url=page_link, callback=self.parse_links, dont_filter=True)
 
     def parse_links(self, response):
+        item = ArchiveorgItem()
+
         href_links = response.xpath('//div[contains(@class, "item-ttl")]'
                                     '/a/@href').extract()
 
         for href in href_links:
             link = 'https://archive.org%s' % href
-            yield scrapy.Request(url=link, callback=self.parse_product, dont_filter=True)
+            item['archiveURL'] = link
+            yield scrapy.Request(url=link, meta={"item": item},
+                                 callback=self.parse_product, dont_filter=True)
 
     def parse_product(self, response):
-        item = ArchiveorgItem()
+        item = response.meta["item"]
 
         # Parse title
         title = self._parse_title(response)
@@ -53,6 +57,10 @@ class ArchiveSpider(scrapy.Spider):
         # Parse release date
         release_date = self._parse_release_date(response)
         item['release_date'] = release_date
+
+        # Parse performer
+        performer = self._parse_performer(response)
+        item['performer'] = performer
 
         # Pare more information link
         more_link = self._parse_more_link(response)
@@ -69,10 +77,22 @@ class ArchiveSpider(scrapy.Spider):
 
     @staticmethod
     def _parse_release_date(response):
-        release_date = is_empty(response.xpath('//div[contains(@class, "pubdate")]'
-                                               '/nobr[@class="hidden-xs"]/text()').extract())
-
+        release_date = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
+                                               '//div[contains(@class, "thats-left")]'
+                                               '//div[@class="key-val-big"]'
+                                               '/a/text()').extract())
+        if release_date == '78rpm':
+            release_date = 'None'
         return release_date
+
+    @staticmethod
+    def _parse_performer(response):
+        performer = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
+                                            '//div[contains(@class, "thats-left")]'
+                                            '//div[@id="descript"]'
+                                            '/p/text()').extract())
+
+        return performer
 
     @staticmethod
     def _parse_more_link(response):

@@ -12,4 +12,6 @@ class ArchiveorgItem(scrapy.Item):
     # define the fields for your item here like:
     title = scrapy.Field()
     release_date = scrapy.Field()
+    performer = scrapy.Field()
+    archiveURL = scrapy.Field()
     more_link = scrapy.Field()
