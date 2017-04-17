@@ -11,8 +11,9 @@ is_empty = lambda x, y=None: x[0] if x else y
 class ArchiveSpider(scrapy.Spider):
     name = "archive_product"
     start_urls = ['https://archive.org/details/georgeblood?sort=-publicdate']
+
     PAGE_LINK = 'https://archive.org/details/georgeblood?&sort=-publicdate&page={page_number}'
-    item_per_page = 75
+    item_per_page = 75  # display the number of items per page
 
     def start_requests(self):
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse_pages)
@@ -20,6 +21,7 @@ class ArchiveSpider(scrapy.Spider):
     def parse_pages(self, response):
         page_links = []
 
+        # total count is number of results
         total_count = response.xpath('//div[@class="columns-facets"]'
                                      '/h3/text()').extract()
         total_count = self._clean_text(total_count[0])
