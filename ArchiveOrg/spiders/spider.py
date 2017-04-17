@@ -146,13 +146,13 @@ class ArchiveSpider(scrapy.Spider):
                                 catalog_num=self.CATALOG_NUM,
                                 title=self.TITLE,
                                 performer=self.PERFORMER)
-
-        yield scrapy.Request(url=url, callback=self._parse_more_link)
+        return url
+        # yield scrapy.Request(url=url, callback=self._parse_more_link)
 
     def _parse_more_link(self, response):
         link = is_empty(response.xpath('//div[@class="_NId"]/div[@class="srg"]'
-                                       '/div[@class="g"]//div[@class="s"]'
-                                       '//cite[@class="_Rm"]/text()').extract())
+                                       '/div[@class="g"]'
+                                       '//h3[@class="r"]/a/@data-href').extract())
         self.MORE_URL = link
         return self.MORE_URL
 
