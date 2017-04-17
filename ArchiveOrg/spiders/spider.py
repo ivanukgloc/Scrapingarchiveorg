@@ -15,6 +15,12 @@ class ArchiveSpider(scrapy.Spider):
     PAGE_LINK = 'https://archive.org/details/georgeblood?&sort=-publicdate&page={page_number}'
     item_per_page = 75  # display the number of items per page
 
+    TITLE = ''
+    PERFORMER = ''
+    PUBLISHER = ''
+    CATALOG_NUM = ''
+    MORE_URL = ''
+
     def start_requests(self):
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse_pages)
 
@@ -50,25 +56,18 @@ class ArchiveSpider(scrapy.Spider):
     def parse_product(self, response):
         item = response.meta["item"]
 
-        # Parse title
-        title = self._parse_title(response)
-        item['title'] = title
-
-        # Parse release date
+        # Parse Release date
         release_date = self._parse_release_date(response)
         item['release_date'] = release_date
 
-        # Parse performer
-        performer = self._parse_performer(response)
-        item['performer'] = performer
+        item['title'] = self._parse_title(response)
+        item['performer'] = self._parse_performer(response)
+        item['publisher'] = self._parse_publisher(response)
+        item['catalog_num'] = self._parse_catalog_num(response)
 
-        # Parse catalog number
-        catalog_num = self._parse_catalog_num(response)
-        item['catalog_num'] = catalog_num
-
-        # Pare more information link
-        more_link = self._parse_more_link(response)
-        item['more_link'] = more_link
+        # Parse 78discography URL
+        more_link = self._parse_search_link(response)
+        item['more_URL'] = more_link
 
         yield item
 
@@ -77,6 +76,7 @@ class ArchiveSpider(scrapy.Spider):
                                '//div[contains(@class, "thats-left")]'
                                '/h1/text()')[1].extract()
         title = self._clean_text(title)
+        self.TITLE = title
         return title
 
     @staticmethod
@@ -89,37 +89,72 @@ class ArchiveSpider(scrapy.Spider):
             release_date = 'None'
         return release_date
 
-    @staticmethod
-    def _parse_performer(response):
+    def _parse_performer(self, response):
         performer = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
                                             '//div[contains(@class, "thats-left")]'
-                                            '//div[@id="descript"]'
-                                            '/p/text()').extract())
-
-        return performer
-
-    @staticmethod
-    def _parse_catalog_num(response):
-        catalog_num = response.xpath('//div[contains(@class, "relative-row")]'
-                                     '//div[contains(@class, "thats-left")]'
-                                     '//div[@id="descript"]'
-                                     '/p[5]/text()')[1].extract()
-        return catalog_num
-
-    @staticmethod
-    def _parse_more_link(response):
-        more_link = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
-                                            '//div[contains(@class, "thats-left")]'
                                             '//div[@class="key-val-big"]'
-                                            '/a/@href').extract())
+                                            '/span[@class="value"]/a/text()').extract())
+        self.PERFORMER = performer
+        return self.PERFORMER
 
-        if 'date' in more_link:
-            more_link = 'https://archive.org%s' % more_link
+    def _parse_publisher(self, response):
+        publisher = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
+                                            '//div[contains(@class, "thats-left")]'
+                                            '/span[@class="value"]'
+                                            '/a/text()').extract())
+        self.PUBLISHER = publisher
+        return self.PUBLISHER
 
-        else:
-            more_link = "None"
+    def _parse_catalog_num(self, response):
+        catalog_num = ''
+        catalog_num_standard = response.xpath('//div[contains(@class, "relative-row")]'
+                                              '//div[contains(@class, "thats-left")]'
+                                              '//div[@id="descript"]'
+                                              '/p[5]/text()[2]')
+        catalog_num_other = response.xpath('//div[contains(@class, "relative-row")]'
+                                           '//div[contains(@class, "thats-left")]'
+                                           '//div[@id="descript"]'
+                                           '/p[4]/text()[2]')
+        catalog_num_special = response.xpath('//div[contains(@class, "relative-row")]'
+                                             '//div[contains(@class, "thats-left")]'
+                                             '//div[@id="descript"]'
+                                             '/p[3]/text()[2]')
+        catalog_num_ospecial = response.xpath('//div[contains(@class, "relative-row")]'
+                                              '//div[contains(@class, "thats-left")]'
+                                              '//div[@id="descript"]'
+                                              '/p[2]/text()[2]')
+        if catalog_num_standard:
+            catalog_num = catalog_num_standard[0].extract()
+        elif catalog_num_other:
+            catalog_num = catalog_num_other[0].extract()
+        elif catalog_num_special:
+            catalog_num = catalog_num_special[0].extract()
+        elif catalog_num_ospecial:
+            catalog_num = catalog_num_ospecial[0].extract()
 
-        return more_link
+        self.CATALOG_NUM = self._clean_text(catalog_num)
+        return self.CATALOG_NUM
+
+    def _parse_search_link(self, response):
+        google_url = 'https://www.google.com/search?' \
+                     'q=site:{reference_url}' + " " + \
+                     '{publisher}' + " " + \
+                     '{catalog_num}' + " " + '{title}' + " " + '{performer}'
+
+        url = google_url.format(reference_url="www.78discography.com",
+                                publisher=self.PUBLISHER,
+                                catalog_num=self.CATALOG_NUM,
+                                title=self.TITLE,
+                                performer=self.PERFORMER)
+
+        yield scrapy.Request(url=url, callback=self._parse_more_link)
+
+    def _parse_more_link(self, response):
+        link = is_empty(response.xpath('//div[@class="_NId"]/div[@class="srg"]'
+                                       '/div[@class="g"]//div[@class="s"]'
+                                       '//cite[@class="_Rm"]/text()').extract())
+        self.MORE_URL = link
+        return self.MORE_URL
 
     def _clean_text(self, text):
         text = re.sub("[\n\t]", "", text)

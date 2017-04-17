@@ -7,7 +7,6 @@
 
 import scrapy
 
-
 class ArchiveorgItem(scrapy.Item):
     # define the fields for your item here like:
     title = scrapy.Field()
@@ -15,4 +14,5 @@ class ArchiveorgItem(scrapy.Item):
     performer = scrapy.Field()
     archiveURL = scrapy.Field()
     catalog_num = scrapy.Field()
-    more_link = scrapy.Field()
+    publisher = scrapy.Field()
+    more_URL = scrapy.Field()
