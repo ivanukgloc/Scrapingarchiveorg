@@ -90,38 +90,44 @@ class ArchiveSpider(scrapy.Spider):
                                                '//div[contains(@class, "thats-left")]'
                                                '//div[@class="key-val-big"]'
                                                '/a/text()').extract())
-        if release_date == '78rpm':
+        if '19' in release_date:
+            release_date = re.search('19(\d+)', release_date).group()
+        else:
             if self.CATALOG_NUM:
                 if '-' in self.CATALOG_NUM:
-                    date = " "
+                    date = ""
+                    self.URL = ""
                 else:
-                    if re.search('\d+', self.CATALOG_NUM):
-                        world_catalog = re.search('\d+', self.CATALOG_NUM).group()
-                        url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
-                        response_data = requests.get(url)
+                    world_catalog = re.search('\d+', self.CATALOG_NUM).group()
+                    url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
+                    response_data = requests.get(url)
 
-                        if str(response_data) == '<Response [200]>':
-                            original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
+                    if str(response_data) == '<Response [200]>':
+                        original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
 
-                            if original_date:
-                                date = re.search('19(\d+)', original_date).group()
-                                self.URL = url
-                            else:
-                                date = " "
+                        if original_date:
+                            date = re.search('19(\d+)', original_date).group()
+                            self.URL = url
                         else:
-                            date = " "
+                            date = ""
                     else:
-                        date = " "
+                        date = ""
 
                 release_date = date
 
             else:
-                release_date = " "
+                release_date = ""
 
         return release_date
 
     def _parse_performer(self, response):
-        performer = re.search('<b>Performer:</b>(.*?)<br', response.body).group(1)
+        if 'Performer' in response.body:
+            if 'Writer' in response.body:
+                performer = re.search('<b>Performer:</b>(.*?)<br', response.body).group(1)
+            else:
+                performer = re.search('<b>Performer:</b>(.*?);', response.body).group(1)
+        else:
+            performer = ""
         self.PERFORMER = performer
         return self.PERFORMER
 
@@ -135,7 +141,7 @@ class ArchiveSpider(scrapy.Spider):
 
     def _parse_catalog_num(self, response):
         catalog_num = re.search('<b>Catalog number:</b>(.*?)</p>', response.body).group(1)
-        self.CATALOG_NUM = self._clean_text(catalog_num)
+        self.CATALOG_NUM = catalog_num
 
         return self.CATALOG_NUM
 
