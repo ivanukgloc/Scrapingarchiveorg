@@ -54,7 +54,7 @@ class ArchiveSpider(scrapy.Spider):
         for href in href_links:
             link = 'https://archive.org%s' % href
             item['archive_url'] = link
-            yield scrapy.Request(url=link, meta={"item": item},
+            yield scrapy.Request(url=item['archive_url'], meta={"item": item},
                                  callback=self.parse_product, dont_filter=True)
 
     def parse_product(self, response):
@@ -98,16 +98,19 @@ class ArchiveSpider(scrapy.Spider):
                     date = ""
                     self.URL = ""
                 else:
-                    world_catalog = re.search('\d+', self.CATALOG_NUM).group()
-                    url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
-                    response_data = requests.get(url)
+                    if re.search('\d+', self.CATALOG_NUM):
+                        world_catalog = re.search('\d+', self.CATALOG_NUM).group()
+                        url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
+                        response_data = requests.get(url)
 
-                    if str(response_data) == '<Response [200]>':
-                        original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
+                        if str(response_data) == '<Response [200]>':
+                            original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
 
-                        if original_date:
-                            date = re.search('19(\d+)', original_date).group()
-                            self.URL = url
+                            if original_date:
+                                date = re.search('19(\d+)', original_date).group()
+                                self.URL = url
+                            else:
+                                date = ""
                         else:
                             date = ""
                     else:
@@ -123,7 +126,11 @@ class ArchiveSpider(scrapy.Spider):
     def _parse_performer(self, response):
         if 'Performer' in response.body:
             if 'Writer' in response.body:
-                performer = re.search('<b>Performer:</b>(.*?)<br', response.body).group(1)
+                performer = re.search('<b>Performer:</b>(.*?)</p>', response.body).group(1)
+                if 'Writer' in performer:
+                    performer = re.search('<b>Performer:</b>(.*?)<br', response.body).group(1)
+                else:
+                    performer = performer
             else:
                 performer = re.search('<b>Performer:</b>(.*?);', response.body).group(1)
         else:
