@@ -23,6 +23,7 @@ class ArchiveSpider(scrapy.Spider):
     PUBLISHER = ''
     CATALOG_NUM = ''
     MORE_URL = ''
+    URL = ''
 
     def start_requests(self):
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse_pages)
@@ -52,25 +53,27 @@ class ArchiveSpider(scrapy.Spider):
 
         for href in href_links:
             link = 'https://archive.org%s' % href
-            item['archiveURL'] = link
+            item['archive_url'] = link
             yield scrapy.Request(url=link, meta={"item": item},
                                  callback=self.parse_product, dont_filter=True)
 
     def parse_product(self, response):
         item = response.meta["item"]
 
-        item['title'] = self._parse_title(response)
-        item['performer'] = self._parse_performer(response)
-        item['publisher'] = self._parse_publisher(response)
-        item['catalog_num'] = self._parse_catalog_num(response)
+        title = self._parse_title(response)
+        performer = self._parse_performer(response)
+        publisher = self._parse_publisher(response)
+        catalog_num = self._parse_catalog_num(response)
 
         # Parse Release date
         release_date = self._parse_release_date(response)
         item['release_date'] = release_date
 
-        # Parse 78discography URL
+        # Parse Google Search URL
         more_link = self._parse_search_link(response)
         item['google_url'] = more_link
+
+        item['URL'] = self.URL
 
         yield item
 
@@ -89,21 +92,32 @@ class ArchiveSpider(scrapy.Spider):
                                                '/a/text()').extract())
         if release_date == '78rpm':
             if self.CATALOG_NUM:
-                world_catalog = re.search('\d+', self.CATALOG_NUM).group()
-                url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
-                response_data = requests.get(url)
-                if str(response_data) == '<Response [404]>':
-                    date = ""
-                else:
-                    original_date = re.search('<td>Date:(.*?)</tr>', response_data.content).group(1)\
-                        .replace('<td>', '').replace('</td>', '')
-                    if original_date:
-                        date = re.search('19(\d+)', original_date).group()
-                    else:
+                if re.search('\d+', self.CATALOG_NUM):
+                    world_catalog = re.search('\d+', self.CATALOG_NUM).group()
+                    url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
+                    self.URL = ""
+                    response_data = requests.get(url)
+
+                    if str(response_data) == '<Response [404]>':
                         date = ""
+
+                    else:
+                        original_date = re.search('<td>Date:(.*?)</tr>', response_data.content).group(1)\
+                            .replace('<td>', '').replace('</td>', '')
+
+                        if original_date:
+                            date = re.search('19(\d+)', original_date).group()
+                            self.URL = url
+                        else:
+                            date = ""
+                else:
+                    date = ""
+
                 release_date = date
+
             else:
                 release_date = ""
+
         return release_date
 
     def _parse_performer(self, response):

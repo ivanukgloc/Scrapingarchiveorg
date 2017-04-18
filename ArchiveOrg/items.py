@@ -9,10 +9,7 @@ import scrapy
 
 class ArchiveorgItem(scrapy.Item):
     # define the fields for your item here like:
-    title = scrapy.Field()
     release_date = scrapy.Field()
-    performer = scrapy.Field()
-    archiveURL = scrapy.Field()
-    catalog_num = scrapy.Field()
-    publisher = scrapy.Field()
+    archive_url = scrapy.Field()
     google_url = scrapy.Field()
+    URL = scrapy.Field()
