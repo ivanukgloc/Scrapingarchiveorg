@@ -92,39 +92,36 @@ class ArchiveSpider(scrapy.Spider):
                                                '/a/text()').extract())
         if release_date == '78rpm':
             if self.CATALOG_NUM:
-                if re.search('\d+', self.CATALOG_NUM):
-                    world_catalog = re.search('\d+', self.CATALOG_NUM).group()
-                    url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
-                    self.URL = ""
-                    response_data = requests.get(url)
-
-                    if str(response_data) == '<Response [404]>':
-                        date = ""
-
-                    else:
-                        original_date = re.search('<td>Date:(.*?)</tr>', response_data.content).group(1)\
-                            .replace('<td>', '').replace('</td>', '')
-
-                        if original_date:
-                            date = re.search('19(\d+)', original_date).group()
-                            self.URL = url
-                        else:
-                            date = ""
+                if '-' in self.CATALOG_NUM:
+                    date = " "
                 else:
-                    date = ""
+                    if re.search('\d+', self.CATALOG_NUM):
+                        world_catalog = re.search('\d+', self.CATALOG_NUM).group()
+                        url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
+                        response_data = requests.get(url)
+
+                        if str(response_data) == '<Response [200]>':
+                            original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
+
+                            if original_date:
+                                date = re.search('19(\d+)', original_date).group()
+                                self.URL = url
+                            else:
+                                date = " "
+                        else:
+                            date = " "
+                    else:
+                        date = " "
 
                 release_date = date
 
             else:
-                release_date = ""
+                release_date = " "
 
         return release_date
 
     def _parse_performer(self, response):
-        performer = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
-                                            '//div[contains(@class, "thats-left")]'
-                                            '//div[@class="key-val-big"]'
-                                            '/span[@class="value"]/a/text()').extract())
+        performer = re.search('<b>Performer:</b>(.*?)<br', response.body).group(1)
         self.PERFORMER = performer
         return self.PERFORMER
 
@@ -137,33 +134,9 @@ class ArchiveSpider(scrapy.Spider):
         return self.PUBLISHER
 
     def _parse_catalog_num(self, response):
-        catalog_num = ''
-        catalog_num_standard = response.xpath('//div[contains(@class, "relative-row")]'
-                                              '//div[contains(@class, "thats-left")]'
-                                              '//div[@id="descript"]'
-                                              '/p[5]/text()[2]')
-        catalog_num_other = response.xpath('//div[contains(@class, "relative-row")]'
-                                           '//div[contains(@class, "thats-left")]'
-                                           '//div[@id="descript"]'
-                                           '/p[4]/text()[2]')
-        catalog_num_special = response.xpath('//div[contains(@class, "relative-row")]'
-                                             '//div[contains(@class, "thats-left")]'
-                                             '//div[@id="descript"]'
-                                             '/p[3]/text()[2]')
-        catalog_num_ospecial = response.xpath('//div[contains(@class, "relative-row")]'
-                                              '//div[contains(@class, "thats-left")]'
-                                              '//div[@id="descript"]'
-                                              '/p[2]/text()[2]')
-        if catalog_num_standard:
-            catalog_num = catalog_num_standard[0].extract()
-        elif catalog_num_other:
-            catalog_num = catalog_num_other[0].extract()
-        elif catalog_num_special:
-            catalog_num = catalog_num_special[0].extract()
-        elif catalog_num_ospecial:
-            catalog_num = catalog_num_ospecial[0].extract()
-
+        catalog_num = re.search('<b>Catalog number:</b>(.*?)</p>', response.body).group(1)
         self.CATALOG_NUM = self._clean_text(catalog_num)
+
         return self.CATALOG_NUM
 
     def _parse_search_link(self, response):
