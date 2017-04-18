@@ -91,19 +91,19 @@ class ArchiveSpider(scrapy.Spider):
             if self.CATALOG_NUM:
                 world_catalog = re.search('\d+', self.CATALOG_NUM).group()
                 url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
-                data = requests.get(url)
-                if str(data) == '<Response [404]>':
-                    data = "None"
+                response_data = requests.get(url)
+                if str(response_data) == '<Response [404]>':
+                    date = ""
                 else:
-                    original_data = re.search('<td>Date:(.*?)</tr>', data.content).group(1)\
+                    original_date = re.search('<td>Date:(.*?)</tr>', response_data.content).group(1)\
                         .replace('<td>', '').replace('</td>', '')
-                    if original_data:
-                        data = re.search('19(\d+)', original_data).group()
+                    if original_date:
+                        date = re.search('19(\d+)', original_date).group()
                     else:
-                        data = "None"
-                release_date = data
+                        date = ""
+                release_date = date
             else:
-                release_date = "None"
+                release_date = ""
         return release_date
 
     def _parse_performer(self, response):
