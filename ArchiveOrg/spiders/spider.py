@@ -3,6 +3,7 @@
 
 import scrapy
 import re
+import requests
 
 from ArchiveOrg.items import ArchiveorgItem
 
@@ -10,6 +11,8 @@ is_empty = lambda x, y=None: x[0] if x else y
 
 class ArchiveSpider(scrapy.Spider):
     name = "archive_product"
+    allowed_domains = ["https://archive.org", "www.45worlds.com"]
+
     start_urls = ['https://archive.org/details/georgeblood?sort=-publicdate']
 
     PAGE_LINK = 'https://archive.org/details/georgeblood?&sort=-publicdate&page={page_number}'
@@ -56,18 +59,18 @@ class ArchiveSpider(scrapy.Spider):
     def parse_product(self, response):
         item = response.meta["item"]
 
-        # Parse Release date
-        release_date = self._parse_release_date(response)
-        item['release_date'] = release_date
-
         item['title'] = self._parse_title(response)
         item['performer'] = self._parse_performer(response)
         item['publisher'] = self._parse_publisher(response)
         item['catalog_num'] = self._parse_catalog_num(response)
 
+        # Parse Release date
+        release_date = self._parse_release_date(response)
+        item['release_date'] = release_date
+
         # Parse 78discography URL
         more_link = self._parse_search_link(response)
-        item['more_URL'] = more_link
+        item['google_url'] = more_link
 
         yield item
 
@@ -79,14 +82,28 @@ class ArchiveSpider(scrapy.Spider):
         self.TITLE = title
         return title
 
-    @staticmethod
-    def _parse_release_date(response):
+    def _parse_release_date(self, response):
         release_date = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
                                                '//div[contains(@class, "thats-left")]'
                                                '//div[@class="key-val-big"]'
                                                '/a/text()').extract())
         if release_date == '78rpm':
-            release_date = 'None'
+            if self.CATALOG_NUM:
+                world_catalog = re.search('\d+', self.CATALOG_NUM).group()
+                url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
+                data = requests.get(url)
+                if str(data) == '<Response [404]>':
+                    data = "None"
+                else:
+                    original_data = re.search('<td>Date:(.*?)</tr>', data.content).group(1)\
+                        .replace('<td>', '').replace('</td>', '')
+                    if original_data:
+                        data = re.search('19(\d+)', original_data).group()
+                    else:
+                        data = "None"
+                release_date = data
+            else:
+                release_date = "None"
         return release_date
 
     def _parse_performer(self, response):
@@ -147,14 +164,6 @@ class ArchiveSpider(scrapy.Spider):
                                 title=self.TITLE,
                                 performer=self.PERFORMER)
         return url
-        # yield scrapy.Request(url=url, callback=self._parse_more_link)
-
-    def _parse_more_link(self, response):
-        link = is_empty(response.xpath('//div[@class="_NId"]/div[@class="srg"]'
-                                       '/div[@class="g"]'
-                                       '//h3[@class="r"]/a/@data-href').extract())
-        self.MORE_URL = link
-        return self.MORE_URL
 
     def _clean_text(self, text):
         text = re.sub("[\n\t]", "", text)

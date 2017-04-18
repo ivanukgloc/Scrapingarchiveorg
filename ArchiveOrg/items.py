@@ -15,4 +15,4 @@ class ArchiveorgItem(scrapy.Item):
     archiveURL = scrapy.Field()
     catalog_num = scrapy.Field()
     publisher = scrapy.Field()
-    more_URL = scrapy.Field()
+    google_url = scrapy.Field()
