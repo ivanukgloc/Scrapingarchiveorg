@@ -240,10 +240,16 @@ class DiscographySpider(scrapy.Spider):
                 date = re.search('19(\d+)', date).group()
             else:
                 if '-' in date:
-                    date = '19' + re.search('-(\d+)', date).group(1)
+                    if len(re.search('-(\d+)', date).group(1)) == 1:
+                        date = '190' + re.search('-(\d+)', date).group(1)
+                    else:
+                        date = '19' + re.search('-(\d+)', date).group(1)
                 else:
                     if re.search('/(\d+)', date):
-                        date = re.search('/(\d+)', date).group(1)
+                        if len(re.search('/(\d+)', date).group(1)) == 1:
+                            date = '190' + re.search('/(\d+)', date).group(1)
+                        else:
+                            date = '19' + re.search('/(\d+)', date).group(1)
                     else:
                         date = ''
         return date
