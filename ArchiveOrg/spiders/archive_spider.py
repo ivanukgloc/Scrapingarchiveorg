@@ -5,7 +5,7 @@ import scrapy
 import re
 import requests
 
-from ArchiveOrg.items import ArchiveorgItem
+from ArchiveOrg.items import ArchiveorgItem, DiscographyItem
 
 is_empty = lambda x, y=None: x[0] if x else y
 
@@ -169,4 +169,94 @@ class ArchiveSpider(scrapy.Spider):
         text = re.sub("[\n\t]", "", text)
         text = re.sub(",", "", text).strip()
         return text
+
+class DiscographySpider(scrapy.Spider):
+    name = 'disco_products'
+    allowed_domains = ["78discography.com"]
+
+    start_urls = ['http://78discography.com/']
+
+    def start_requests(self):
+        yield scrapy.Request(url=self.start_urls[0], callback=self.parse_pages)
+
+    def parse_pages(self, response):
+        links = response.xpath('//center/b/font/a/@href').extract()
+
+        for link in links:
+            if 'http' in link:
+                href = link
+            else:
+                href = response.url + link
+
+            yield scrapy.Request(url=href, callback=self.parse_product, dont_filter=True)
+
+    def parse_product(self, response):
+        product_list = []
+        product = DiscographyItem()
+
+        total_count = response.xpath('//table/tr/td[1]/text()').extract()
+
+        for i in range(len(total_count)):
+
+            title = self._parse_title(response, i)
+            artist = self._parse_artist(response, i)
+            composer = self._parse_composer(response, i)
+            date = self._parse_date(response, i)
+            catalog_num = self._parse_catalog_num(response, i)
+
+            product['title'] = title
+            product['artist'] = artist
+            product['composer'] = composer
+            product['release_date'] = date
+            product['catalog_num'] = catalog_num
+
+            product_list.append(product)
+
+        return product_list
+
+    @staticmethod
+    def _parse_catalog_num(response, index):
+        cnum = response.xpath('//table/tr/td[1]/text()')[index].extract()
+        return cnum
+
+    @staticmethod
+    def _parse_artist(response, index):
+        artist = response.xpath('//table/tr/td[2]/text()')[index].extract()
+        return artist
+
+    @staticmethod
+    def _parse_title(response, index):
+        title = response.xpath('//table/tr/td[3]/text()')[index].extract()
+        return title
+
+    @staticmethod
+    def _parse_date(response, index):
+        date = response.xpath('//table/tr/td[7]/text()')[index].extract()
+
+        if date == '-':
+            date = ''
+        else:
+            if re.search('19(\d+)', date):
+                date = re.search('19(\d+)', date).group()
+            else:
+                if '-' in date:
+                    date = '19' + re.search('-(\d+)', date).group(1)
+                else:
+                    if re.search('/(\d+)', date):
+                        date = re.search('/(\d+)', date).group(1)
+                    else:
+                        date = ''
+        return date
+
+    @staticmethod
+    def _parse_composer(response, index):
+        composer = response.xpath('//table/tr/td[8]/text()')[index].extract()
+        return composer
+
+
+
+
+
+
+
 
