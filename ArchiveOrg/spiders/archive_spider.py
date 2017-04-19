@@ -205,6 +205,7 @@ class DiscographySpider(scrapy.Spider):
 
             if date == '':
                 break
+
             else:
                 product['title'] = title
                 product['artist'] = artist
@@ -262,11 +263,3 @@ class DiscographySpider(scrapy.Spider):
             composer = ''
 
         return composer
-
-
-
-
-
-
-
-
