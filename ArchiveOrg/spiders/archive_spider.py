@@ -191,7 +191,6 @@ class DiscographySpider(scrapy.Spider):
             yield scrapy.Request(url=href, callback=self.parse_product, dont_filter=True)
 
     def parse_product(self, response):
-        product_list = []
         product = DiscographyItem()
 
         total_count = response.xpath('//table/tr/td[1]/text()').extract()
@@ -204,15 +203,16 @@ class DiscographySpider(scrapy.Spider):
             date = self._parse_date(response, i)
             catalog_num = self._parse_catalog_num(response, i)
 
-            product['title'] = title
-            product['artist'] = artist
-            product['composer'] = composer
-            product['release_date'] = date
-            product['catalog_num'] = catalog_num
+            if date == '':
+                break
+            else:
+                product['title'] = title
+                product['artist'] = artist
+                product['composer'] = composer
+                product['release_date'] = date
+                product['catalog_num'] = catalog_num
 
-            product_list.append(product)
-
-        return product_list
+                yield product
 
     @staticmethod
     def _parse_catalog_num(response, index):
@@ -251,6 +251,10 @@ class DiscographySpider(scrapy.Spider):
     @staticmethod
     def _parse_composer(response, index):
         composer = response.xpath('//table/tr/td[8]/text()')[index].extract()
+
+        if composer == '-':
+            composer = ''
+
         return composer
 
 
