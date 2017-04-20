@@ -16,6 +16,7 @@ class ArchiveorgItem(scrapy.Item):
 
 class DiscographyItem(scrapy.Item):
     # define the fields for your item here like:
+    label = scrapy.Field()
     release_date = scrapy.Field()
     catalog_num = scrapy.Field()
     title = scrapy.Field()

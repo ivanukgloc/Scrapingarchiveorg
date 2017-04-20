@@ -180,6 +180,7 @@ class DiscographySpider(scrapy.Spider):
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse_pages)
 
     def parse_pages(self, response):
+        product = DiscographyItem()
         links = response.xpath('//center/b/font/a/@href').extract()
 
         for link in links:
@@ -188,10 +189,14 @@ class DiscographySpider(scrapy.Spider):
             else:
                 href = response.url + link
 
-            yield scrapy.Request(url=href, callback=self.parse_product, dont_filter=True)
+            label = link.replace(".htm", "")
+            product["label"] = label
+
+            yield scrapy.Request(url=href, callback=self.parse_product,
+                                 meta={"product": product}, dont_filter=True)
 
     def parse_product(self, response):
-        product = DiscographyItem()
+        product = response.meta["product"]
 
         total_count = response.xpath('//table/tr/td[1]/text()').extract()
 
