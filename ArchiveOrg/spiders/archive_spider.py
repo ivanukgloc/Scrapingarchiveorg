@@ -180,7 +180,7 @@ class DiscographySpider(scrapy.Spider):
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse_pages)
 
     def parse_pages(self, response):
-        product = DiscographyItem()
+
         links = response.xpath('//center/b/font/a/@href').extract()
 
         for link in links:
@@ -189,19 +189,21 @@ class DiscographySpider(scrapy.Spider):
             else:
                 href = response.url + link
 
-            label = link.replace(".htm", "")
-            product["label"] = label
+            # label = href.replace(".htm", "")
+            # product["label"] = label
 
             yield scrapy.Request(url=href, callback=self.parse_product,
-                                 meta={"product": product}, dont_filter=True)
+                                 dont_filter=True)
 
     def parse_product(self, response):
-        product = response.meta["product"]
-
+        # product = response.meta["product"]
+        product = DiscographyItem()
         total_count = response.xpath('//table/tr/td[1]/text()').extract()
 
         for i in range(len(total_count)):
 
+            label = response.url.replace(".htm", "")
+            label = re.search('http://78discography.com/(.*)', label).group(1)
             title = self._parse_title(response, i)
             artist = self._parse_artist(response, i)
             composer = self._parse_composer(response, i)
@@ -217,6 +219,7 @@ class DiscographySpider(scrapy.Spider):
                 product['composer'] = composer
                 product['release_date'] = date
                 product['catalog_num'] = catalog_num
+                product['label'] = label
 
                 yield product
 
