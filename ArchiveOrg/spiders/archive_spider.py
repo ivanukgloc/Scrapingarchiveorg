@@ -181,7 +181,7 @@ class DiscographySpider(scrapy.Spider):
 
     def parse_pages(self, response):
 
-        links = response.xpath('//center/b/font/a/@href').extract()
+        links = response.xpath('//center//a/@href').extract()
 
         for link in links:
             if 'http' in link:
@@ -189,14 +189,10 @@ class DiscographySpider(scrapy.Spider):
             else:
                 href = response.url + link
 
-            # label = href.replace(".htm", "")
-            # product["label"] = label
-
             yield scrapy.Request(url=href, callback=self.parse_product,
                                  dont_filter=True)
 
     def parse_product(self, response):
-        # product = response.meta["product"]
         product = DiscographyItem()
         total_count = response.xpath('//table/tr/td[1]/text()').extract()
 
