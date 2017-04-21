@@ -46,19 +46,16 @@ class ArchiveSpider(scrapy.Spider):
             yield scrapy.Request(url=page_link, callback=self.parse_links, dont_filter=True)
 
     def parse_links(self, response):
-        item = ArchiveorgItem()
-
         href_links = response.xpath('//div[contains(@class, "item-ttl")]'
                                     '/a/@href').extract()
 
         for href in href_links:
             link = 'https://archive.org%s' % href
-            item['archive_url'] = link
-            yield scrapy.Request(url=item['archive_url'], meta={"item": item},
-                                 callback=self.parse_product, dont_filter=True)
+            yield scrapy.Request(url=link, callback=self.parse_product,
+                                 dont_filter=True)
 
     def parse_product(self, response):
-        item = response.meta["item"]
+        item = ArchiveorgItem()
 
         title = self._parse_title(response)
         performer = self._parse_performer(response)
@@ -67,15 +64,20 @@ class ArchiveSpider(scrapy.Spider):
 
         # Parse Release date
         release_date = self._parse_release_date(response)
-        item['release_date'] = release_date
 
-        # Parse Google Search URL
-        more_link = self._parse_search_link(response)
-        item['google_url'] = more_link
+        if release_date == '':
+            return
+        else:
+            item['archive_url'] = response.url
+            item['release_date'] = release_date
 
-        item['URL'] = self.URL
+            # Parse Google Search URL
+            more_link = self._parse_search_link(response)
+            item['google_url'] = more_link
 
-        yield item
+            item['URL'] = self.URL
+
+            yield item
 
     def _parse_title(self, response):
         title = response.xpath('//div[contains(@class, "relative-row")]'
@@ -89,9 +91,10 @@ class ArchiveSpider(scrapy.Spider):
         release_date = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
                                                '//div[contains(@class, "thats-left")]'
                                                '//div[@class="key-val-big"]'
-                                               '/a/text()').extract())
+                                               '/a/@href').extract())
         if '19' in release_date:
-            release_date = re.search('19(\d+)', release_date).group()
+            release_date = re.search('date:(.*)', release_date).group(1)
+            self.URL = ""
         else:
             if self.CATALOG_NUM:
                 if '-' in self.CATALOG_NUM:
@@ -101,7 +104,7 @@ class ArchiveSpider(scrapy.Spider):
                     if re.search('\d+', self.CATALOG_NUM):
                         world_catalog = re.search('\d+', self.CATALOG_NUM).group()
                         url = 'http://www.45worlds.com/78rpm/record/' + str(world_catalog)
-                        response_data = requests.get(url)
+                        response_data = requests.get(url, timeout=5)
 
                         if str(response_data) == '<Response [200]>':
                             original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
@@ -132,7 +135,10 @@ class ArchiveSpider(scrapy.Spider):
                 else:
                     performer = performer
             else:
-                performer = re.search('<b>Performer:</b>(.*?);', response.body).group(1)
+                if re.search('<b>Performer:</b>(.*?);', response.body):
+                    performer = re.search('<b>Performer:</b>(.*?);', response.body).group(1)
+                else:
+                    performer = re.search('<b>Performer:</b>(.*?)</p>', response.body).group(1)
         else:
             performer = ""
         self.PERFORMER = performer
