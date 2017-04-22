@@ -110,7 +110,7 @@ class ArchiveSpider(scrapy.Spider):
                             original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
 
                             if original_date:
-                                date = re.search('19(\d+)', original_date).group()
+                                date = original_date
                                 self.URL = url
                             else:
                                 date = ""
