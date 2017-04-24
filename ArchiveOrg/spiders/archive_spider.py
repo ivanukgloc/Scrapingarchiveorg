@@ -24,6 +24,7 @@ class ArchiveSpider(scrapy.Spider):
     CATALOG_NUM = ''
     MORE_URL = ''
     URL = ''
+    LOCATION = ''
 
     def start_requests(self):
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse_pages)
@@ -76,6 +77,7 @@ class ArchiveSpider(scrapy.Spider):
             item['google_url'] = more_link
 
             item['URL'] = self.URL
+            item['location'] = self.LOCATION
 
             yield item
 
@@ -107,6 +109,11 @@ class ArchiveSpider(scrapy.Spider):
                         response_data = requests.get(url, timeout=5)
 
                         if str(response_data) == '<Response [200]>':
+                            location = re.search('Country:</td><td>(.*?)</td></tr>',
+                                                 response_data.content).group(1)
+                            location = re.search('>(.*)</a>', location).group(1)
+                            self.LOCATION = location
+
                             original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
 
                             if original_date:

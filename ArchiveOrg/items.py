@@ -13,6 +13,7 @@ class ArchiveorgItem(scrapy.Item):
     archive_url = scrapy.Field()
     google_url = scrapy.Field()
     URL = scrapy.Field()
+    location = scrapy.Field()
 
 class DiscographyItem(scrapy.Item):
     # define the fields for your item here like:
