@@ -25,6 +25,7 @@ class ArchiveSpider(scrapy.Spider):
     MORE_URL = ''
     URL = ''
     LOCATION = ''
+    GENRE = ''
 
     def start_requests(self):
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse_pages)
@@ -78,6 +79,7 @@ class ArchiveSpider(scrapy.Spider):
 
             item['URL'] = self.URL
             item['location'] = self.LOCATION
+            item['genre'] = self.GENRE
 
             yield item
 
@@ -113,6 +115,9 @@ class ArchiveSpider(scrapy.Spider):
                                                  response_data.content).group(1)
                             location = re.search('>(.*)</a>', location).group(1)
                             self.LOCATION = location
+
+                            genre = re.search('Format:</td><td>(.*?)</td></tr>', response_data.content).group(1)
+                            self.GENRE = genre
 
                             original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
 
