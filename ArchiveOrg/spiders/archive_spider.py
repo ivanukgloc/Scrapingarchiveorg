@@ -5,6 +5,8 @@ import scrapy
 import re
 import requests
 
+from HTMLParser import HTMLParser
+
 from ArchiveOrg.items import ArchiveorgItem, DiscographyItem
 
 is_empty = lambda x, y=None: x[0] if x else y
@@ -117,7 +119,7 @@ class ArchiveSpider(scrapy.Spider):
                             self.LOCATION = location
 
                             genre = re.search('Format:</td><td>(.*?)</td></tr>', response_data.content).group(1)
-                            self.GENRE = genre
+                            self.GENRE = HTMLParser().unescape(genre)
 
                             original_date = re.search('Date:</td><td>(.*?)</td></tr>', response_data.content).group(1)
 
