@@ -11,6 +11,7 @@ from ArchiveOrg.items import ArchiveorgItem, DiscographyItem
 
 is_empty = lambda x, y=None: x[0] if x else y
 
+
 class ArchiveSpider(scrapy.Spider):
     name = "archive_product"
     allowed_domains = ["https://archive.org", "www.45worlds.com"]
@@ -72,6 +73,14 @@ class ArchiveSpider(scrapy.Spider):
         if release_date == '':
             return
         else:
+            item['title'] = title
+            item['performer'] = performer
+            item['publisher'] = publisher
+            item['catalog_num'] = catalog_num
+
+            # Parse Genre
+            item['genre'] = self.GENRE
+
             item['archive_url'] = response.url
             item['release_date'] = release_date
 
@@ -80,8 +89,9 @@ class ArchiveSpider(scrapy.Spider):
             item['google_url'] = more_link
 
             item['URL'] = self.URL
+
+            # Parse Location
             item['location'] = self.LOCATION
-            item['genre'] = self.GENRE
 
             yield item
 
@@ -99,8 +109,10 @@ class ArchiveSpider(scrapy.Spider):
                                                '//div[@class="key-val-big"]'
                                                '/a/@href').extract())
         if '19' in release_date:
-            release_date = re.search('date:(.*)', release_date).group(1)
-            self.URL = ""
+            release_date = re.search('date:(.*)', release_date)
+            if release_date:
+                release_date = release_date.group(1)
+                self.URL = ""
         else:
             if self.CATALOG_NUM:
                 if '-' in self.CATALOG_NUM:
@@ -159,18 +171,19 @@ class ArchiveSpider(scrapy.Spider):
         return self.PERFORMER
 
     def _parse_publisher(self, response):
-        publisher = is_empty(response.xpath('//div[contains(@class, "relative-row")]'
-                                            '//div[contains(@class, "thats-left")]'
-                                            '/span[@class="value"]'
-                                            '/a/text()').extract())
-        self.PUBLISHER = publisher
-        return self.PUBLISHER
+        publisher = response.xpath('//div[contains(@class, "relative-row")]'
+                                   '//div[contains(@class, "thats-left")]'
+                                   '/span[@class="value"]'
+                                   '/a/text()').extract()
+        if publisher:
+            self.PUBLISHER = publisher[0]
+            return self.PUBLISHER
 
     def _parse_catalog_num(self, response):
-        catalog_num = re.search('<b>Catalog number:</b>(.*?)</p>', response.body).group(1)
-        self.CATALOG_NUM = catalog_num
-
-        return self.CATALOG_NUM
+        catalog_num = re.search('<b>Catalog number:</b>(.*?)</p>', response.body)
+        if catalog_num:
+            self.CATALOG_NUM = catalog_num.group(1)
+            return self.CATALOG_NUM
 
     def _parse_search_link(self, response):
         google_url = 'https://www.google.com/search?' \
@@ -185,10 +198,12 @@ class ArchiveSpider(scrapy.Spider):
                                 performer=self.PERFORMER)
         return url
 
+    @staticmethod
     def _clean_text(self, text):
         text = re.sub("[\n\t]", "", text)
         text = re.sub(",", "", text).strip()
         return text
+
 
 class DiscographySpider(scrapy.Spider):
     name = 'disco_products'
